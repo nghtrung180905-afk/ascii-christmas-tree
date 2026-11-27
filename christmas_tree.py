@@ -526,10 +526,7 @@ class Renderer:
         surf = pygame.surfarray.make_surface(img.transpose(1, 0, 2))
         screen.blit(surf, (0, 0))
 
-        t_surf = self.hud_font.render(f"t {info['t']:05.2f}s / 60.0s", True, ACCENT)
-        screen.blit(t_surf, (self.w - t_surf.get_width() - 14, 10))
-
-        sig = self.hud_font.render("@dwcminh.ascii", True, SIGN)
+        sig = self.hud_font.render("@nghtrung", True, SIGN)
         rot = self.hud_font.render(f"rotation {info['rotation']:06.2f}°     lights {info['lights']}", True, DIM)
         let = self.hud_font.render(f"letters {info['letters']:,}", True, DIM)
         screen.blit(sig, (14, self.h - 62))
@@ -542,8 +539,6 @@ class Renderer:
             pygame.draw.rect(screen, (20, 24, 34), (0, y0, self.w, 28))
             pygame.draw.line(screen, (38, 44, 58), (0, y0), (self.w, y0), 1)
             screen.blit(self.hud_font.render("christmas_tree.py", True, (210, 216, 228)), (14, y0 + 6))
-            st_surf = self.hud_font.render("running · 60 fps · 60s loop", True, ACCENT)
-            screen.blit(st_surf, (self.w - st_surf.get_width() - 14, y0 + 6))
 
             total = max(1, len(self.source_lines) - 11)
             scroll = int(((info["t"] % LOOP_DURATION) / LOOP_DURATION) * total)
