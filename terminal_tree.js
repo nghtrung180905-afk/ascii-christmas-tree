@@ -12,7 +12,7 @@ const LOOP_DURATION = 60.0;
 const GROUND = -1.20, Y0 = -0.92, Y1 = 1.28;
 const T_GROW = [0.9, 6.4], T_GARLAND = [6.3, 8.4], T_BALLS = [8.1, 9.8];
 const T_LIGHTS = [9.5, 11.8], T_GIFTS = [11.2, 13.0], T_STAR = 13.2, T_MSG = 14.4;
-const MESSAGE = "M E R R Y   C H R I S T M A S   2 0 2 6";
+const MESSAGE = "M E R R Y   C H R I S T M A S   V Ợ   Y Ê N";
 
 const RAMP_NEEDLE = " .:-~=+*xv%&#W";
 const RAMP_TINSEL = " ~=-+*#&@";
