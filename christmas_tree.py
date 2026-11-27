@@ -58,7 +58,7 @@ GREEN_BOX = (0.16, 0.78, 0.36)
 BLUE_BOX = (0.20, 0.52, 0.98)
 WARM = (1.00, 0.88, 0.50)
 
-MESSAGE = "M E R R Y   C H R I S T M A S   2 0 2 6"
+MESSAGE = "M E R R Y   C H R I S T M A S   V Ợ   Y Ê N"
 
 RAMP_NEEDLE = np.frombuffer(b" .:-~=+*xv%&#W", dtype=np.uint8)
 RAMP_SNOW = np.frombuffer(b" .+*#@", dtype=np.uint8)
