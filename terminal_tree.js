@@ -323,6 +323,6 @@ setInterval(() => {
   }
   const deg = ((angle * 180) / Math.PI).toFixed(2).padStart(6, "0");
   const lights = scene.lightT0.filter(x => t >= x).length;
-  out += `\x1b[38;2;184;176;206m @dwcminh.ascii\x1b[0m   \x1b[38;2;110;118;138mrotation ${deg}°   lights ${lights}\x1b[0m   \x1b[38;2;255;196;90mt ${t.toFixed(2).padStart(5, "0")}s / 60.0s · 60 fps\x1b[0m`;
+  out += `\x1b[38;2;184;176;206m @nghtrung\x1b[0m   \x1b[38;2;110;118;138mrotation ${deg}°   lights ${lights}\x1b[0m`;
   process.stdout.write(out);
 }, 16);
