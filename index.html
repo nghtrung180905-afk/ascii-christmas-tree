@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ASCII Christmas Tree 🎄 — High-Detail 60 FPS · 60s Loop</title>
+  <style>
+    :root {
+      --bg: #07090f;
+      --panel-bg: #0d1017;
+      --header-bg: #141822;
+      --border: #252c3b;
+      --dim: rgb(110, 118, 138);
+      --accent: rgb(255, 196, 90);
+      --sign: rgb(184, 176, 206);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #030407;
+      color: #d8dee9;
+      font-family: Consolas, Menlo, "DejaVu Sans Mono", "Courier New", monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 10px;
+      user-select: none;
+    }
+    .frame {
+      position: relative;
+      z-index: 2;
+      width: min(864px, 98vw);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+    }
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 864 / 1092;
+      max-height: 82vh;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .canvas-wrap.full-mode {
+      max-height: 90vh;
+    }
+    canvas#asciiCanvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .hud-top-right {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      color: var(--accent);
+      font-size: 13px;
+      letter-spacing: 0.4px;
+      pointer-events: none;
+      text-shadow: 0 0 8px rgba(255, 196, 90, 0.35);
+    }
+    .hud-bottom-left {
+      position: absolute;
+      bottom: 12px;
+      left: 16px;
+      font-size: 12.5px;
+      line-height: 1.5;
+      pointer-events: none;
+    }
+    .hud-sign { color: var(--sign); margin-bottom: 2px; }
+    .hud-dim { color: var(--dim); white-space: pre; }
+    .code-panel {
+      background: var(--panel-bg);
+      border-top: 1px solid var(--border);
+      height: 230px;
+      display: flex;
+      flex-direction: column;
+    }
+    .code-panel.hidden { display: none; }
+    .code-header {
+      background: var(--header-bg);
+      padding: 6px 16px;
+      font-size: 12.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1d2330;
+    }
+    .code-title { color: #d8dee9; }
+    .code-status { color: var(--accent); }
+    .code-body {
+      padding: 8px 0;
+      font-size: 12px;
+      line-height: 16px;
+      overflow: hidden;
+      flex: 1;
+    }
+    .code-line {
+      display: flex;
+      padding: 0 14px;
+      white-space: pre;
+    }
+    .code-line.active {
+      background: rgba(56, 70, 98, 0.36);
+    }
+    .ln {
+      width: 36px;
+      color: #4c566a;
+      text-align: right;
+      margin-right: 14px;
+      flex-shrink: 0;
+    }
+    .lc { color: #d8dee9; overflow: hidden; text-overflow: ellipsis; }
+    .kw { color: #c678dd; }
+    .cm { color: #6c7a96; font-style: italic; }
+    .nm { color: #d19a66; }
+    .controls {
+      position: relative;
+      z-index: 2;
+      width: min(864px, 98vw);
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--dim);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .controls button {
+      background: #141822;
+      color: #d8dee9;
+      border: 1px solid #2a3244;
+      border-radius: 5px;
+      padding: 5px 11px;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .controls button:hover { border-color: var(--accent); color: var(--accent); }
+    .scrubber-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 220px;
+      max-width: 320px;
+    }
+    .scrubber-wrap input[type="range"] {
+      flex: 1;
+      accent-color: #ffc45a;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="asciiCanvas" width="864" height="1092"></canvas>
+      <div class="hud-top-right" id="hudTime">t 00.00s / 60.0s</div>
+      <div class="hud-bottom-left">
+        <div class="hud-sign">@dwcminh.ascii</div>
+        <div class="hud-dim" id="hudRot">rotation 000.00°     lights 0</div>
+        <div class="hud-dim" id="hudLet">letters 0</div>
+      </div>
+    </div>
+    <div class="code-panel" id="codePanel">
+      <div class="code-header">
+        <span class="code-title">christmas_tree.py</span>
+        <span class="code-status" id="statusLabel">running · 60 fps · 60s loop</span>
+      </div>
+      <div class="code-body" id="codeBody"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="btn-group">
+      <button id="btnPause">Space · Pause</button>
+      <button id="btnRestart">R · Restart</button>
+      <button id="btnJump">Full Tree (18.5s)</button>
+      <button id="btnToggleCode">C · Hide Code</button>
+      <button id="btnShot">S · Screenshot</button>
+    </div>
+    <div class="scrubber-wrap">
+      <span>t</span>
+      <input type="range" id="timeSlider" min="0" max="60" step="0.1" value="0" />
+      <span id="fpsLabel">60 fps</span>
+    </div>
+  </div>
+
+  <script>
+    const TAU = Math.PI * 2;
+    const COLS = 96, ROWS = 78;
+    const CW = 9, CH = 14;
+    const W = COLS * CW, H = ROWS * CH;
+    const LOOP_DURATION = 60.0;
+
+    // Larger tree geometry bounds
+    const GROUND = -1.20, Y0 = -0.92, Y1 = 1.28;
+
+    // Unhurried 60s timeline: ~18s build-up + ~40s smooth full rotation + 1.5s gentle reset fade
+    const T_GROW = [0.9, 6.4];
+    const T_GARLAND = [6.3, 8.4];
+    const T_BALLS = [8.1, 9.8];
+    const T_LIGHTS = [9.5, 11.8];
+    const T_GIFTS = [11.2, 13.0];
+    const T_STAR = 13.2;
+    const T_MSG = 14.4;
+
+    // Part categories
+    const NEEDLE = 0, SNOW = 1, TRUNK = 2, TINSEL = 3, BALL = 4, LIGHT = 5, GIFT = 6, RIBBON = 7;
+
+    // Colors
+    const WHITE = [0.97, 0.99, 1.00];
+    const GOLD = [1.00, 0.82, 0.30];
+    const BAUBLE_GOLD = [1.00, 0.78, 0.24];
+    const SILVER = [0.88, 0.93, 1.00];
+    const RED = [0.98, 0.20, 0.22];
+    const GREEN_BOX = [0.16, 0.78, 0.36];
+    const BLUE_BOX = [0.20, 0.52, 0.98];
+    const WARM = [1.00, 0.88, 0.50];
+
+    const MESSAGE = "M E R R Y   C H R I S T M A S   2 0 2 6";
+
+    // Authentic per-material ASCII ramps matching @dwcminh.ascii aesthetic
+    const RAMP_NEEDLE = " .:-~=+*xv%&#W";
+    const RAMP_SNOW   = " .+*#@";
+    const RAMP_TRUNK  = " .:+|#H";
+    const RAMP_TINSEL = " ~=-+*#&@";
+    const RAMP_BALL   = " .o0O%#@";
+    const RAMP_GIFT   = " .:+*xX#%@";
+
+    function encodeRamp(str) {
+      const a = new Uint8Array(str.length);
+      for (let i = 0; i < str.length; i++) a[i] = str.charCodeAt(i);
+      return a;
+    }
+    const ARAMP_NEEDLE = encodeRamp(RAMP_NEEDLE);
+    const ARAMP_SNOW   = encodeRamp(RAMP_SNOW);
+    const ARAMP_TRUNK  = encodeRamp(RAMP_TRUNK);
+    const ARAMP_TINSEL = encodeRamp(RAMP_TINSEL);
+    const ARAMP_BALL   = encodeRamp(RAMP_BALL);
+    const ARAMP_GIFT   = encodeRamp(RAMP_GIFT);
+
+    const SOURCE_CODE = [
+      [106, "def grow_time(y):"],
+      [107, "    return T_GROW[0] + (T_GROW[1] - T_GROW[0]) * np.clip((y - GROUND) / (Y1 - GROUND), 0, 1)"],
+      [108, ""],
+      [109, ""],
+      [110, "def build():"],
+      [111, "    rng = np.random.default_rng(7)"],
+      [112, "    q = Parts()"],
+      [113, "    tips = []"],
+      [114, ""],
+      [115, "    # needles: 28 dense whorls of drooping pine branches + sub-twigs"],
+      [116, "    for i, y in enumerate(np.linspace(Y0 + 0.02, Y1 - 0.05, 28)):"],
+      [117, "        u = (y - Y0) / (Y1 - Y0)"],
+      [118, "        R = envelope(y) + 0.06"],
+      [119, "        nb = int(7 + 14 * (1 - u))"],
+      [120, "        for b in range(nb):"],
+      [121, "            a = TAU * (b + 0.5 * rng.random()) / nb + i * 0.77"],
+      [122, "            L = R * rng.uniform(0.86, 1.12)"],
+      [123, "            n = int(35 + 340 * L)"],
+      [124, "            s = rng.random(n) ** 0.65            # 0 trunk .. 1 tip"],
+      [125, "            d = np.array([np.cos(a), 0, np.sin(a)])"],
+      [126, "            side = np.array([-np.sin(a), 0, np.cos(a)])"],
+      [127, "            spread = (0.030 + 0.11 * s) * rng.normal(0, 1, n)"],
+      [128, "            sl = s * L"],
+      [129, "            p = d * sl[:, None] + side * spread[:, None]"],
+      [130, "            p[:, 1] = y + 0.07 * sl - 0.22 * sl ** 2 + 0.014 * rng.normal(0, 1, n)"],
+      [131, "            nrm = unit(d * 0.75 + np.array([0, 0.55, 0]) + 0.3 * rng.normal(0, 1, (n, 3)))"],
+      [132, "            ao = (0.30 + 0.70 * s ** 1.3) * rng.uniform(0.75, 1.1, n)"],
+      [133, "            snow = (s > 0.48) & (rng.random(n) < 0.07 * s) & (nrm[:, 1] > 0.45)"],
+      [134, "            green = np.array([0.08, 0.50, 0.18]) + np.array([0.14, 0.40, 0.16]) * rng.random((n, 1))"],
+      [135, "            q.add(p, nrm, np.where(snow[:, None], WHITE, green), np.where(snow, SNOW, NEEDLE),"],
+      [136, "                  grow_time(y) + 0.45 * s, base=np.where(snow, 1.0, ao))"],
+      [137, "            tl = 0.94 * L"],
+      [138, "            tips.append(d * tl + [0, y + 0.07 * tl - 0.22 * tl ** 2, 0])"],
+      [139, ""],
+      [140, "    # dense dark inner cone so nothing shows through the branches"],
+      [141, "    m = 9000"],
+      [142, "    y = Y0 + (Y1 - 0.08 - Y0) * rng.random(m)"],
+      [143, "    phi = rng.random(m) * TAU"],
+      [144, "    out = np.stack([np.cos(phi), np.full(m, 0.3), np.sin(phi)], 1)"],
+      [145, "    r = 0.64 * envelope(y)"],
+      [146, "    q.add(np.stack([np.cos(phi) * r, y, np.sin(phi) * r], 1), out, (0.08, 0.42, 0.16), NEEDLE,"],
+      [147, "          base=0.72)"],
+      [148, ""],
+      [149, "    # trunk"],
+      [150, "    m = 2200"],
+      [151, "    y, phi = GROUND + rng.random(m) * (Y0 + 0.14 - GROUND), rng.random(m) * TAU"],
+      [152, "    n = np.stack([np.cos(phi), np.zeros(m), np.sin(phi)], 1)"],
+      [153, "    bark = 0.75 + 0.25 * np.sign(np.sin(phi * 30 + y * 5))"],
+      [154, "    q.add(n * 0.10 + np.stack([np.zeros(m), y, np.zeros(m)], 1), n, np.array([0.46, 0.28, 0.15]) * bark[:, None],"],
+      [155, "          TRUNK, grow_time(y))"],
+      [156, ""],
+      [157, "    # tinsel garland: thick gold spiral drooping in swags between hanging points"],
+      [158, "    u = np.linspace(0, 1, 3600)"],
+      [159, "    turns = 4.2"],
+      [160, "    yg = Y0 + 0.14 + (Y1 - Y0 - 0.42) * u"],
+      [161, "    ag = TAU * turns * u + 0.9"],
+      [162, "    swag = -0.08 * np.abs(np.sin(ag * 2.5))"],
+      [163, "    rg = envelope(yg) + 0.08"],
+      [164, "    line = np.stack([np.cos(ag) * rg, yg + swag, np.sin(ag) * rg], 1)"],
+      [165, "    for _ in range(5):"],
+      [166, "        nrm = np.stack([np.cos(ag), np.full_like(u, 0.3), np.sin(ag)], 1) + 0.6 * rng.normal(0, 1, line.shape)"],
+      [167, "        q.add(line + 0.018 * rng.normal(0, 1, line.shape), nrm, GOLD, TINSEL,"],
+      [168, "              T_GARLAND[0] + u * (T_GARLAND[1] - T_GARLAND[0]), phase=rng.random(len(u)) * 10)"],
+      [169, ""],
+      [170, "    # baubles: red, gold and silver ornaments"],
+      [171, "    sphere = fib_sphere(160)"],
+      [172, "    for k in range(44):"],
+      [173, "        u = (k + rng.random()) / 44"],
+      [174, "        y = Y0 + 0.08 + u * (Y1 - Y0 - 0.34)"],
+      [178, "        col = RED if k % 2 == 0 else BAUBLE_GOLD"],
+      [182, "    # 220 fairy lights on the branch tips"],
+      [184, "    pick = rng.choice(len(tips), min(220, len(tips)), replace=False)"],
+      [191, "    # presents: 7 large wrapped boxes with crossed ribbons and bows"],
+      [359, "def star(char, col, cx, cy, size, t, power, cell, flash=0.0):"],
+      [425, "    if t > T_MSG:"],
+      [426, "        row, x0 = rows - 7, (cols - len(MESSAGE)) // 2"],
+      [432, "                put(char, col, row, x0 + i, ch, tint, 0.85 + 0.25 * np.sin(t * 5 + i))"],
+      [439, "TITLE = \"ASCII Christmas Tree\""],
+      [441, "COLS, ROWS = 96, 78"],
+      [448, "class Renderer:"],
+      [459, "        self.atlas = np.stack(atlas)  # 60 FPS glyph atlas, 60.0s loop"]
+    ];
+
+    function makeRng(seed = 7) {
+      let a = seed >>> 0;
+      return {
+        random() {
+          let t = (a += 0x6D2B79F5);
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        },
+        uniform(lo, hi) { return lo + (hi - lo) * this.random(); },
+        normal() {
+          const u = Math.max(1e-7, this.random()), v = this.random();
+          return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v);
+        }
+      };
+    }
+
+    function smooth(x) {
+      const c = x < 0 ? 0 : x > 1 ? 1 : x;
+      return c * c * (3 - 2 * c);
+    }
+
+    function envelope(y) {
+      const u = Math.max(0, Math.min(1, (y - Y0) / (Y1 - Y0)));
+      // Wider base radius + subtle scalloped branch-tier modulation for iconic layered silhouette
+      const tier = 1.0 + 0.055 * Math.sin(u * Math.PI * 14);
+      return (0.045 + 1.12 * Math.pow(1 - u, 1.05)) * tier;
+    }
+
+    function growTime(y) {
+      const u = Math.max(0, Math.min(1, (y - GROUND) / (Y1 - GROUND)));
+      return T_GROW[0] + (T_GROW[1] - T_GROW[0]) * u;
+    }
+
+    function fibSphere(n) {
+      const pts = [];
+      const gr = (1 + Math.sqrt(5)) / 2;
+      for (let k = 0; k < n; k++) {
+        const i = k + 0.5;
+        const phi = TAU * i / gr;
+        const ct = 1 - 2 * i / n;
+        const st = Math.sqrt(Math.max(0, 1 - ct * ct));
+        pts.push([Math.cos(phi) * st, ct, Math.sin(phi) * st]);
+      }
+      return pts;
+    }
+
+    function buildScene() {
+      const rng = makeRng(7);
+      const raw = [];
+      const tips = [];
+      const lightT0 = [];
+
+      const addPt = (x, y, z, nx, ny, nz, col, kind, t0, base = 1, phase = 0, cx = x, cy = y, cz = z, pop = false) => {
+        const len = Math.hypot(nx, ny, nz) || 1;
+        raw.push(
+          x, y, z,
+          nx / len, ny / len, nz / len,
+          col[0], col[1], col[2],
+          kind, t0, base, phase,
+          cx, cy, cz, pop ? 1 : 0
+        );
+      };
+
+      // 1. 28 whorls of drooping pine branches + fluffy sub-needles
+      for (let i = 0; i < 28; i++) {
+        const y = (Y0 + 0.02) + (i / 27) * ((Y1 - 0.05) - (Y0 + 0.02));
+        const u = (y - Y0) / (Y1 - Y0);
+        const R = envelope(y) + 0.06;
+        const nb = Math.floor(7 + 14 * (1 - u));
+        for (let b = 0; b < nb; b++) {
+          const a = TAU * (b + 0.5 * rng.random()) / nb + i * 0.77;
+          const L = R * rng.uniform(0.86, 1.12);
+          const n = Math.floor(35 + 230 * L);
+          const dx = Math.cos(a), dz = Math.sin(a);
+          const sx = -dz, sz = dx;
+          for (let k = 0; k < n; k++) {
+            const s = Math.pow(rng.random(), 0.65);
+            const spread = (0.030 + 0.115 * s) * rng.normal();
+            const sl = s * L;
+            const px = dx * sl + sx * spread;
+            const pz = dz * sl + sz * spread;
+            const py = y + 0.07 * sl - 0.22 * sl * sl + 0.015 * rng.normal();
+            const nx = dx * 0.75 + 0.3 * rng.normal();
+            const ny = 0.55 + 0.3 * rng.normal();
+            const nz = dz * 0.75 + 0.3 * rng.normal();
+            const ao = (0.30 + 0.70 * Math.pow(s, 1.3)) * rng.uniform(0.75, 1.12);
+            const snow = s > 0.48 && rng.random() < 0.065 * s && ny > 0.45;
+            const rt = rng.random();
+            const col = snow ? WHITE : [0.08 + 0.14 * rt, 0.48 + 0.42 * rt, 0.16 + 0.16 * rt];
+            addPt(px, py, pz, nx, ny, nz, col, snow ? SNOW : NEEDLE, growTime(y) + 0.45 * s, snow ? 1.0 : ao);
+          }
+          const tl = 0.94 * L;
+          tips.push([dx * tl, y + 0.07 * tl - 0.22 * tl * tl, dz * tl]);
+        }
+      }
+
+      // 2. Dense inner dark cone so no gaps show through branches
+      for (let k = 0; k < 7500; k++) {
+        const y = Y0 + (Y1 - 0.08 - Y0) * rng.random();
+        const phi = rng.random() * TAU;
+        const r = 0.64 * envelope(y);
+        addPt(Math.cos(phi) * r, y, Math.sin(phi) * r, Math.cos(phi), 0.3, Math.sin(phi),
+          [0.08, 0.42, 0.16], NEEDLE, growTime(y), 0.72);
+      }
+
+      // 3. Textured tree trunk
+      for (let k = 0; k < 2000; k++) {
+        const y = GROUND + rng.random() * (Y0 + 0.14 - GROUND);
+        const phi = rng.random() * TAU;
+        const nx = Math.cos(phi), nz = Math.sin(phi);
+        const bark = 0.75 + 0.25 * Math.sign(Math.sin(phi * 30 + y * 5));
+        addPt(nx * 0.11, y, nz * 0.11, nx, 0, nz, [0.46 * bark, 0.28 * bark, 0.15 * bark], TRUNK, growTime(y), 1.0);
+      }
+
+      // 4. Thick 5-strand golden tinsel garland swags
+      for (let pass = 0; pass < 5; pass++) {
+        for (let k = 0; k < 1400; k++) {
+          const u = k / 1400;
+          const yg = Y0 + 0.14 + (Y1 - Y0 - 0.42) * u;
+          const ag = TAU * 4.2 * u + 0.9;
+          const swag = -0.08 * Math.abs(Math.sin(ag * 2.5));
+          const rg = envelope(yg) + 0.08;
+          const px = Math.cos(ag) * rg + 0.018 * rng.normal();
+          const py = yg + swag + 0.018 * rng.normal();
+          const pz = Math.sin(ag) * rg + 0.018 * rng.normal();
+          const nx = Math.cos(ag) + 0.5 * rng.normal();
+          const ny = 0.3 + 0.5 * rng.normal();
+          const nz = Math.sin(ag) + 0.5 * rng.normal();
+          addPt(px, py, pz, nx, ny, nz, GOLD, TINSEL,
+            T_GARLAND[0] + u * (T_GARLAND[1] - T_GARLAND[0]), 1.12, rng.random() * 10);
+        }
+      }
+
+      // 5. 44 3D Spherical Baubles (Red, Gold, Silver)
+      const sph = fibSphere(110);
+      for (let k = 0; k < 44; k++) {
+        const u = (k + rng.random()) / 44;
+        const y = Y0 + 0.08 + u * (Y1 - Y0 - 0.34);
+        const ang = k * 2.39996 + rng.uniform(-0.22, 0.22);
+        const r = envelope(y) * 0.94;
+        const cx = Math.cos(ang) * r, cz = Math.sin(ang) * r;
+        const rad = 0.068 + 0.036 * (1 - u);
+        const col = k % 5 === 4 ? SILVER : (k % 2 === 0 ? RED : BAUBLE_GOLD);
+        const t0 = T_BALLS[0] + rng.random() * (T_BALLS[1] - T_BALLS[0]);
+        for (const [sx, sy, sz] of sph) {
+          addPt(cx + sx * rad, y + sy * rad, cz + sz * rad, sx, sy, sz, col, BALL, t0, 1.05, 0, cx, y, cz, true);
+        }
+      }
+
+      // 6. 220 Twinkling Fairy Lights on branch tips (with colorful accents)
+      const bulb = fibSphere(16);
+      const count = Math.min(220, tips.length);
+      for (let i = 0; i < count; i++) {
+        const c = tips[Math.floor((i / count) * tips.length)];
+        const t0 = T_LIGHTS[0] + rng.random() * (T_LIGHTS[1] - T_LIGHTS[0]);
+        lightT0.push(t0);
+        const rPick = rng.random();
+        const col = rPick < 0.68 ? WARM : (rPick < 0.85 ? [1.0, 0.96, 0.88] : (rPick < 0.93 ? RED : [0.45, 0.90, 1.0]));
+        const phase = rng.random() * 10;
+        for (const [sx, sy, sz] of bulb) {
+          addPt(c[0] + sx * 0.035, c[1] + sy * 0.035, c[2] + sz * 0.035, sx, sy, sz, col, LIGHT, t0, 1.25, phase, c[0], c[1], c[2], true);
+        }
+      }
+
+      // 7. 7 Large Wrapped Gift Boxes with crossed ribbons & bows around the base
+      const gifts = [
+        [0.25, 1.15, 0.38, 0.28, 0.34, 0.40, RED, GOLD],
+        [1.15, 1.20, 0.32, 0.36, 0.32, -0.25, BLUE_BOX, WHITE],
+        [2.05, 1.14, 0.40, 0.22, 0.32, 0.95, GOLD, RED],
+        [2.95, 1.20, 0.30, 0.32, 0.30, 0.20, RED, GREEN_BOX],
+        [3.85, 1.15, 0.36, 0.26, 0.34, 0.15, GREEN_BOX, RED],
+        [4.75, 1.22, 0.28, 0.34, 0.28, -0.45, BLUE_BOX, GOLD],
+        [5.60, 1.14, 0.34, 0.24, 0.30, 0.65, RED, WHITE],
+      ];
+      const bowLoop = fibSphere(72);
+      for (let g = 0; g < gifts.length; g++) {
+        const [a, dist, w, h, d, rot, body, rib] = gifts[g];
+        const cx = Math.cos(a) * dist, cz = Math.sin(a) * dist;
+        const t0 = T_GIFTS[0] + (g / gifts.length) * (T_GIFTS[1] - T_GIFTS[0]);
+        const ca = Math.cos(rot), sa = Math.sin(rot);
+        for (let k = 0; k < 1450; k++) {
+          const f = k % 5;
+          const fa = rng.random() - 0.5, fb = rng.random() - 0.5;
+          const lx = f === 0 ? fa * w : f === 1 ? w / 2 : f === 2 ? -w / 2 : fa * w;
+          const ly = f === 0 ? h : (fb + 0.5) * h;
+          const lz = f === 0 ? fb * d : f <= 2 ? fa * d : f === 3 ? d / 2 : -d / 2;
+          const nx = f === 1 ? 1 : f === 2 ? -1 : 0;
+          const ny = f === 0 ? 1 : 0;
+          const nz = f === 3 ? 1 : f === 4 ? -1 : 0;
+          const isRib = Math.abs(lx) < 0.038 || Math.abs(lz) < 0.038;
+          const col = isRib ? rib : body;
+          const wx = cx + lx * ca + lz * sa;
+          const wy = GROUND + ly;
+          const wz = cz - lx * sa + lz * ca;
+          addPt(wx, wy, wz, nx * ca + nz * sa, ny, -nx * sa + nz * ca, col, isRib ? RIBBON : GIFT, t0, 1.05, 0, cx, GROUND + h / 2, cz, true);
+        }
+        // Bow on top
+        const bowY = GROUND + h + 0.035;
+        for (const [sx, sy, sz] of bowLoop) {
+          addPt(cx + sx * 0.075, bowY + sy * 0.045, cz + sz * 0.075, sx, sy, sz, rib, RIBBON, t0 + 0.12, 1.15, 0, cx, bowY, cz, true);
+        }
+      }
+
+      // Pack into flat TypedArrays for zero-GC 60 FPS rendering
+      const stride = 17;
+      const countPts = raw.length / stride;
+      const buf = new Float32Array(raw);
+
+      // Background twinkling stars & falling snow
+      const bgStars = [];
+      for (let i = 0; i < 165; i++) {
+        bgStars.push([
+          Math.floor(rng.random() * COLS),
+          Math.floor(rng.random() * Math.floor(ROWS * 0.47)),
+          rng.random() * TAU,
+          i % 6 === 0 ? "*" : (i % 3 === 0 ? "+" : ".")
+        ]);
+      }
+      const snowP = [];
+      for (let i = 0; i < 120; i++) {
+        snowP.push([rng.random() * COLS, rng.random() * ROWS, 3.2 + rng.random() * 5.2, rng.random() * TAU]);
+      }
+
+      return { buf, countPts, stride, lightT0, bgStars, snowP };
+    }
+
+    // Build pre-rendered glyph alpha atlas (codes 32..126) for ultra-fast ImageData blitting
+    function buildGlyphAtlas() {
+      const c = document.createElement("canvas");
+      c.width = CW;
+      c.height = CH;
+      const gctx = c.getContext("2d", { willReadFrequently: true });
+      const atlas = new Uint8Array(95 * CW * CH);
+      gctx.font = "bold 14px Consolas, Menlo, 'DejaVu Sans Mono', 'Courier New', monospace";
+      gctx.textAlign = "center";
+      gctx.textBaseline = "middle";
+      gctx.fillStyle = "#ffffff";
+
+      for (let code = 32; code < 127; code++) {
+        gctx.clearRect(0, 0, CW, CH);
+        gctx.fillText(String.fromCharCode(code), CW * 0.5, CH * 0.53);
+        const data = gctx.getImageData(0, 0, CW, CH).data;
+        const base = (code - 32) * CW * CH;
+        for (let p = 0; p < CW * CH; p++) {
+          atlas[base + p] = data[p * 4 + 3];
+        }
+      }
+      return atlas;
+    }
+
+    const scene = buildScene();
+    const glyphAtlas = buildGlyphAtlas();
+
+    const canvas = document.getElementById("asciiCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Offscreen crisp canvas + downscaled bloom buffer
+    const crispCanvas = document.createElement("canvas");
+    crispCanvas.width = W;
+    crispCanvas.height = H;
+    const crispCtx = crispCanvas.getContext("2d");
+    const frameImg = crispCtx.createImageData(W, H);
+    const frameU32 = new Uint32Array(frameImg.data.buffer);
+
+    const glowCanvas = document.createElement("canvas");
+    glowCanvas.width = Math.floor(W / 4);
+    glowCanvas.height = Math.floor(H / 4);
+    const glowCtx = glowCanvas.getContext("2d");
+
+    // Pre-allocated grid buffers (zero GC per frame)
+    const GRID_SIZE = COLS * ROWS;
+    const charBuf = new Uint8Array(GRID_SIZE);
+    const colRBuf = new Uint8Array(GRID_SIZE);
+    const colGBuf = new Uint8Array(GRID_SIZE);
+    const colBBuf = new Uint8Array(GRID_SIZE);
+    const zBuf = new Float32Array(GRID_SIZE);
+
+    function syntaxHighlight(text) {
+      if (text.trim().startsWith("#")) return `<span class="cm">${text}</span>`;
+      return text
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/\b(def|class|for|in|if|else|return|range|enumerate|min|max|int|float|len|zip)\b/g, '<span class="kw">$1</span>')
+        .replace(/\b(\d+(\.\d+)?)\b/g, '<span class="nm">$1</span>');
+    }
+
+    const codeBody = document.getElementById("codeBody");
+    let lastCodeScroll = -1;
+    function updateCodePanel(t) {
+      const maxScroll = Math.max(0, SOURCE_CODE.length - 12);
+      const scroll = Math.min(maxScroll, Math.floor(((t % LOOP_DURATION) / LOOP_DURATION) * maxScroll));
+      if (scroll === lastCodeScroll) return;
+      lastCodeScroll = scroll;
+      const activeIdx = scroll + 5;
+      let html = "";
+      for (let i = 0; i < 12; i++) {
+        const idx = scroll + i;
+        if (idx >= SOURCE_CODE.length) break;
+        const [ln, raw] = SOURCE_CODE[idx];
+        const cls = idx === activeIdx ? "code-line active" : "code-line";
+        html += `<div class="${cls}"><span class="ln">${ln}</span><span class="lc">${syntaxHighlight(raw)}</span></div>`;
+      }
+      codeBody.innerHTML = html;
+    }
+
+    function inPoly(px, py, poly) {
+      let inside = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const xi = poly[i][0], yi = poly[i][1];
+        const xj = poly[j][0], yj = poly[j][1];
+        if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi + 1e-9) + xi)) {
+          inside = !inside;
+        }
+      }
+      return inside;
+    }
+
+    function putCell(r, c, chCode, rr, gg, bb, power = 1.0) {
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+      const idx = r * COLS + c;
+      charBuf[idx] = chCode;
+      colRBuf[idx] = Math.min(255, (rr * power * 255) | 0);
+      colGBuf[idx] = Math.min(255, (gg * power * 255) | 0);
+      colBBuf[idx] = Math.min(255, (bb * power * 255) | 0);
+    }
+
+    function drawStar(cx, cy, size, t, power, cell, flash) {
+      const tintR = GOLD[0] + (1 - GOLD[0]) * flash;
+      const tintG = GOLD[1] + (1 - GOLD[1]) * flash;
+      const tintB = GOLD[2] + (1 - GOLD[2]) * flash;
+      const pwr = power * (1 + 1.65 * flash);
+      const rayChars = [45, 47, 124, 92]; // - / | \
+
+      for (let k = 0; k < 8; k++) {
+        const ang = k * TAU / 8 + 0.10 * Math.sin(t * 0.7);
+        if (Math.sin(ang) < -0.25) continue;
+        const reach = size * (3.2 + 0.9 * Math.sin(t * 3 + k * 1.3)) * (k % 2 === 0 ? 1.0 : 0.65) * (1 + 1.8 * flash);
+        const ch = rayChars[Math.round(((ang * 180 / Math.PI) % 180 + 180) % 180 / 45) % 4];
+        for (let s = size * 1.05; s < reach; s += 0.85) {
+          const fade = Math.pow(1 - s / reach, 1.35);
+          putCell(
+            Math.round(cy - Math.sin(ang) * s / cell),
+            Math.round(cx + Math.cos(ang) * s),
+            ch, tintR, tintG, tintB, pwr * fade * 0.9
+          );
+        }
+      }
+
+      const poly = [];
+      for (let k = 0; k < 10; k++) {
+        const ang = Math.PI / 2 + k * TAU / 10;
+        const r = k % 2 === 0 ? size : size * 0.43;
+        poly.push([cx + Math.cos(ang) * r, cy - Math.sin(ang) * r / cell]);
+      }
+
+      const r0 = Math.max(0, Math.floor(cy - size / cell - 2));
+      const r1 = Math.min(ROWS, Math.ceil(cy + size / cell + 2));
+      const c0 = Math.max(0, Math.floor(cx - size - 2));
+      const c1 = Math.min(COLS, Math.ceil(cx + size + 2));
+      for (let ry = r0; ry < r1; ry++) {
+        for (let rx = c0; rx < c1; rx++) {
+          if (inPoly(rx, ry, poly)) {
+            const d = Math.hypot(rx - cx, (ry - cy) * cell) / Math.max(size, 0.1);
+            const ch = d < 0.35 ? 64 : (d < 0.72 ? 35 : 42); // @ # *
+            const cR = d < 0.32 ? WHITE[0] : tintR;
+            const cG = d < 0.32 ? WHITE[1] : tintG;
+            const cB = d < 0.32 ? WHITE[2] : tintB;
+            putCell(ry, rx, ch, cR, cG, cB, Math.min(1.35, pwr * (1.20 - 0.25 * d)));
+          }
+        }
+      }
+    }
+
+    let t = 0.0;
+    let paused = false;
+    let lastTs = performance.now();
+    let fpsSmooth = 60.0;
+    let frameCounter = 0;
+    const hudTime = document.getElementById("hudTime");
+    const hudRot = document.getElementById("hudRot");
+    const hudLet = document.getElementById("hudLet");
+    const timeSlider = document.getElementById("timeSlider");
+    const fpsLabel = document.getElementById("fpsLabel");
+
+    function renderFrame(now) {
+      const rawDt = (now - lastTs) / 1000;
+      const dt = Math.min(0.05, Math.max(0.001, rawDt));
+      lastTs = now;
+      if (rawDt > 0) fpsSmooth = fpsSmooth * 0.92 + Math.min(120, 1 / rawDt) * 0.08;
+
+      if (!paused) {
+        t += dt;
+        if (t >= LOOP_DURATION) t -= LOOP_DURATION;
+      }
+
+      // Smooth fade-out at end of 60s cycle (58.5s -> 60.0s) and fade-in (0.0s -> 0.6s)
+      let masterAlpha = 1.0;
+      if (t > LOOP_DURATION - 1.5) masterAlpha = Math.max(0.05, (LOOP_DURATION - t) / 1.5);
+      else if (t < 0.6) masterAlpha = 0.25 + 0.75 * (t / 0.6);
+
+      charBuf.fill(0);
+      zBuf.fill(1e9);
+
+      const angle = (t * 0.34) % TAU;
+      const ca = Math.cos(angle), sa = Math.sin(angle);
+      const cp = Math.cos(0.15), sp = Math.sin(0.15);
+      const aspect = W / H;
+      const cell = CH / CW;
+      const zCam = 3.85;
+      const fovHalf = 1.01;
+      const centerY = 0.435;
+
+      // 1. Night sky twinkling stars
+      for (let i = 0; i < scene.bgStars.length; i++) {
+        const st = scene.bgStars[i];
+        const tw = (0.35 + 0.50 * Math.sin(t * 2.2 + st[2])) * masterAlpha;
+        if (tw > 0.22) putCell(st[1], st[0], st[3].charCodeAt(0), 0.78, 0.85, 0.98, tw);
+      }
+
+      // 2. Perspective dotted ground grid (rows 37 .. ROWS-1)
+      const horizonRow = Math.floor(ROWS * 0.47);
+      for (let r = horizonRow; r < ROWS; r++) {
+        const v = (r - horizonRow) / (ROWS - horizonRow);
+        const step = v > 0.55 ? 1 : (v > 0.22 ? 2 : 2);
+        const fade = (0.16 + 0.32 * v) * masterAlpha;
+        for (let c = (r % 2); c < COLS; c += step) {
+          putCell(r, c, 46, 0.44, 0.52, 0.72, fade); // '.'
+        }
+      }
+
+      // 3. Falling snow
+      for (let i = 0; i < scene.snowP.length; i++) {
+        const sn = scene.snowP[i];
+        const ry = Math.floor((sn[1] + t * sn[2]) % ROWS);
+        const rx = Math.floor((sn[0] + Math.sin(t * 1.3 + sn[3]) * 2.4 + COLS) % COLS);
+        const ch = sn[2] > 6.8 ? 42 : (sn[2] > 5.0 ? 43 : 46); // * + .
+        putCell(ry, rx, ch, 0.88, 0.93, 1.0, 0.62 * masterAlpha);
+      }
+
+      // 4. Project & shade all 3D tree + ornament points (zero allocations)
+      const buf = scene.buf;
+      const nPts = scene.countPts;
+      const stride = scene.stride;
+      const lx = 0.48, ly = 0.62, lz = -0.62;
+
+      for (let i = 0, off = 0; i < nPts; i++, off += stride) {
+        const t0 = buf[off + 10];
+        if (t < t0) continue;
+        const age = t - t0;
+
+        let px3 = buf[off];
+        let py3 = buf[off + 1];
+        let pz3 = buf[off + 2];
+        const pop = buf[off + 16];
+        if (pop && age < 0.40) {
+          const uPop = smooth(age / 0.40);
+          const cx = buf[off + 13], cy = buf[off + 14], cz = buf[off + 15];
+          px3 = cx + (px3 - cx) * uPop;
+          py3 = cy + (py3 - cy) * uPop;
+          pz3 = cz + (pz3 - cz) * uPop;
+        }
+
+        const x = px3 * ca + pz3 * sa;
+        const y = py3;
+        const z = -px3 * sa + pz3 * ca;
+        const yc = y * cp - z * sp;
+        const zc = y * sp + z * cp + zCam;
+        if (zc <= 0.25) continue;
+
+        const ix = Math.floor(((x / (zc * aspect)) * fovHalf + 0.5) * COLS);
+        const iy = Math.floor((centerY - (yc / zc) * fovHalf) * ROWS);
+        if (ix < 0 || ix >= COLS || iy < 0 || iy >= ROWS) continue;
+
+        const gIdx = iy * COLS + ix;
+        if (zc >= zBuf[gIdx]) continue;
+        zBuf[gIdx] = zc;
+
+        const nx0 = buf[off + 3], ny0 = buf[off + 4], nz0 = buf[off + 5];
+        const nx = nx0 * ca + nz0 * sa;
+        const ny = ny0;
+        const nz = -nx0 * sa + nz0 * ca;
+
+        const diff = Math.max(0, nx * lx + ny * ly + nz * lz);
+        const rim = Math.pow(Math.max(0, 1 - Math.abs(nz)), 2);
+        const kind = buf[off + 9] | 0;
+        const base = buf[off + 11];
+        const phase = buf[off + 12];
+
+        let shade = (0.34 + 0.74 * diff + 0.22 * rim) * base;
+        if (shade < 0.10) shade = 0.10;
+        if (shade > 1.38) shade = 1.38;
+
+        let cr = buf[off + 6], cg = buf[off + 7], cb = buf[off + 8];
+
+        // Bright white growth-front band on tree foliage & trunk
+        if (kind <= TRUNK && age < 0.42) {
+          const gf = Math.pow(1 - age / 0.42, 1.8);
+          cr = cr * (1 - gf) + WHITE[0] * gf;
+          cg = cg * (1 - gf) + WHITE[1] * gf;
+          cb = cb * (1 - gf) + WHITE[2] * gf;
+          if (shade < 0.98 * gf) shade = 0.98 * gf;
+        }
+
+        // Specular highlight on baubles
+        if (kind === BALL) {
+          const spec = Math.pow(Math.max(0, nx * 0.42 + ny * 0.65 - nz * 0.63), 12);
+          if (spec > 0.35) {
+            cr = cr * (1 - spec) + WHITE[0] * spec;
+            cg = cg * (1 - spec) + WHITE[1] * spec;
+            cb = cb * (1 - spec) + WHITE[2] * spec;
+            shade = Math.max(shade, 1.25);
+          }
+        }
+
+        if (kind === LIGHT) {
+          shade = 1.30 * (0.85 + 0.35 * Math.sin(t * 6.5 + phase));
+        } else if (kind === TINSEL) {
+          shade *= (0.84 + 0.32 * Math.sin(t * 5.0 + phase));
+        }
+
+        shade *= masterAlpha;
+
+        let chCode;
+        if (kind === LIGHT) {
+          chCode = Math.sin(t * 6.5 + phase) > 0.3 ? 64 : 42; // @ or *
+        } else {
+          let ramp = ARAMP_NEEDLE;
+          if (kind === SNOW) ramp = ARAMP_SNOW;
+          else if (kind === TRUNK) ramp = ARAMP_TRUNK;
+          else if (kind === TINSEL) ramp = ARAMP_TINSEL;
+          else if (kind === BALL) ramp = ARAMP_BALL;
+          else if (kind === GIFT || kind === RIBBON) ramp = ARAMP_GIFT;
+          const rIdx = Math.min(ramp.length - 1, Math.max(1, ((shade / 1.25) * (ramp.length - 1)) | 0));
+          chCode = ramp[rIdx];
+        }
+
+        charBuf[gIdx] = chCode;
+        colRBuf[gIdx] = Math.min(255, (cr * shade * 255) | 0);
+        colGBuf[gIdx] = Math.min(255, (cg * shade * 255) | 0);
+        colBBuf[gIdx] = Math.min(255, (cb * shade * 255) | 0);
+      }
+
+      // 5. Top 5-pointed star & radiating light rays
+      if (t >= T_STAR) {
+        const on = smooth((t - T_STAR) / 0.35);
+        const flash = Math.pow(Math.max(0, Math.min(1, 1 - (t - T_STAR) / 1.1)), 2);
+        const yStar = Y1 + 0.14;
+        const yc = yStar * cp;
+        const zc = yStar * sp + zCam;
+        const cx = Math.floor(COLS / 2);
+        const cy = Math.floor((centerY - (yc / zc) * fovHalf) * ROWS);
+        const size = (2.2 + 2.4 * on) * (1 + 0.05 * Math.sin(t * 4));
+        drawStar(cx, cy, size, t, 0.98 * on * masterAlpha, cell, flash);
+      }
+
+      // 6. Typewriter "M E R R Y   C H R I S T M A S   2 0 2 6"
+      if (t > T_MSG) {
+        const row = ROWS - 7;
+        const x0 = Math.floor((COLS - MESSAGE.length) / 2);
+        const shown = Math.min(MESSAGE.length, Math.floor((t - T_MSG) * 10));
+        for (let r = row - 1; r <= row + 1; r++) {
+          for (let c = Math.max(0, x0 - 3); c < Math.min(COLS, x0 + shown + 3); c++) {
+            charBuf[r * COLS + c] = 0;
+          }
+        }
+        const pal = [RED, GOLD, GREEN_BOX];
+        for (let i = 0; i < shown; i++) {
+          const ch = MESSAGE[i];
+          if (ch !== " ") {
+            const tint = pal[(Math.floor(i / 2) + Math.floor(t * 1.5)) % 3];
+            const pulse = (0.88 + 0.25 * Math.sin(t * 5 + i)) * masterAlpha;
+            putCell(row, x0 + i, ch.charCodeAt(0), tint[0], tint[1], tint[2], pulse);
+          }
+        }
+      }
+
+      // 7. Blit glyph atlas into ImageData pixel buffer (32-bit ABGR on little-endian)
+      // Background RGB = (7, 9, 15) -> 0xFF0F0907
+      frameU32.fill(0xFF0F0907);
+      let letters = 0;
+
+      for (let r = 0; r < ROWS; r++) {
+        const yBase = r * CH;
+        const rowOff = r * COLS;
+        for (let c = 0; c < COLS; c++) {
+          const gIdx = rowOff + c;
+          const chCode = charBuf[gIdx];
+          if (chCode < 33 || chCode > 126) continue;
+          letters++;
+
+          const rr = colRBuf[gIdx];
+          const gg = colGBuf[gIdx];
+          const bb = colBBuf[gIdx];
+          const atlasBase = (chCode - 32) * CW * CH;
+          const xBase = c * CW;
+
+          for (let gy = 0; gy < CH; gy++) {
+            const dstRow = (yBase + gy) * W + xBase;
+            const srcRow = atlasBase + gy * CW;
+            for (let gx = 0; gx < CW; gx++) {
+              const a = glyphAtlas[srcRow + gx];
+              if (a > 12) {
+                const inv = 255 - a;
+                const pr = (rr * a + 7 * inv) >> 8;
+                const pg = (gg * a + 9 * inv) >> 8;
+                const pb = (bb * a + 15 * inv) >> 8;
+                frameU32[dstRow + gx] = (255 << 24) | (pb << 16) | (pg << 8) | pr;
+              }
+            }
+          }
+        }
+      }
+
+      crispCtx.putImageData(frameImg, 0, 0);
+
+      // Composite crisp ASCII + soft neon terminal bloom
+      ctx.globalCompositeOperation = "source-over";
+      ctx.drawImage(crispCanvas, 0, 0);
+
+      glowCtx.clearRect(0, 0, glowCanvas.width, glowCanvas.height);
+      glowCtx.drawImage(crispCanvas, 0, 0, glowCanvas.width, glowCanvas.height);
+
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.filter = "blur(6px)";
+      ctx.globalAlpha = 0.38;
+      ctx.drawImage(glowCanvas, 0, 0, W, H);
+      ctx.restore();
+
+      // Update HUD
+      frameCounter++;
+      if (frameCounter % 2 === 0) {
+        const deg = ((angle * 180) / Math.PI) % 360;
+        const lights = scene.lightT0.filter(x => t >= x).length;
+        hudTime.textContent = `t ${t.toFixed(2).padStart(5, "0")}s / 60.0s`;
+        hudRot.textContent = `rotation ${deg.toFixed(2).padStart(6, "0")}°     lights ${lights}`;
+        hudLet.textContent = `letters ${letters.toLocaleString()}`;
+        timeSlider.value = t.toFixed(1);
+        fpsLabel.textContent = `${Math.round(fpsSmooth)} fps`;
+        updateCodePanel(t);
+      }
+
+      requestAnimationFrame(renderFrame);
+    }
+
+    // Controls
+    const codePanel = document.getElementById("codePanel");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const statusLabel = document.getElementById("statusLabel");
+
+    document.getElementById("btnPause").onclick = () => {
+      paused = !paused;
+      statusLabel.textContent = paused ? "paused · 60 fps · 60s loop" : "running · 60 fps · 60s loop";
+    };
+    document.getElementById("btnRestart").onclick = () => { t = 0.0; };
+    document.getElementById("btnJump").onclick = () => { t = 18.5; };
+    document.getElementById("btnToggleCode").onclick = () => {
+      const hidden = codePanel.classList.toggle("hidden");
+      canvasWrap.classList.toggle("full-mode", hidden);
+      document.getElementById("btnToggleCode").textContent = hidden ? "C · Show Code" : "C · Hide Code";
+    };
+    document.getElementById("btnShot").onclick = () => {
+      const link = document.createElement("a");
+      link.download = `ascii_christmas_tree_${t.toFixed(1)}s.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    };
+    timeSlider.oninput = (e) => {
+      t = parseFloat(e.target.value);
+    };
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") { e.preventDefault(); document.getElementById("btnPause").click(); }
+      else if (e.key === "r" || e.key === "R") { t = 0.0; }
+      else if (e.key === "c" || e.key === "C") { document.getElementById("btnToggleCode").click(); }
+      else if (e.key === "s" || e.key === "S") { document.getElementById("btnShot").click(); }
+    });
+
+    // Expose helper for automated testing / jumping to specific timestamps
+    window.setAnimationTime = (val) => { t = Math.max(0, Math.min(LOOP_DURATION - 0.01, val)); };
+
+    requestAnimationFrame(renderFrame);
+  </script>
+</body>
+</html>
