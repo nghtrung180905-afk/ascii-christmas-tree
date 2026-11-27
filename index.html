@@ -172,9 +172,8 @@
   <div class="frame">
     <div class="canvas-wrap" id="canvasWrap">
       <canvas id="asciiCanvas" width="864" height="1092"></canvas>
-      <div class="hud-top-right" id="hudTime">t 00.00s / 60.0s</div>
       <div class="hud-bottom-left">
-        <div class="hud-sign">@dwcminh.ascii</div>
+        <div class="hud-sign">@nghtrung</div>
         <div class="hud-dim" id="hudRot">rotation 000.00°     lights 0</div>
         <div class="hud-dim" id="hudLet">letters 0</div>
       </div>
@@ -182,7 +181,6 @@
     <div class="code-panel" id="codePanel">
       <div class="code-header">
         <span class="code-title">christmas_tree.py</span>
-        <span class="code-status" id="statusLabel">running · 60 fps · 60s loop</span>
       </div>
       <div class="code-body" id="codeBody"></div>
     </div>
@@ -200,6 +198,10 @@
       <span>t</span>
       <input type="range" id="timeSlider" min="0" max="60" step="0.1" value="0" />
       <span id="fpsLabel">60 fps</span>
+    </div>
+    <div class="btn-group" style="width: 100%; margin-top: 2px;">
+      <input type="text" id="msgInput" value="MERRY CHRISTMAS 2026" maxlength="44" placeholder="Nhập lời chúc (VD: MERRY CHRISTMAS 2026)" style="flex: 1; min-width: 220px; background: #141822; color: #d8dee9; border: 1px solid #2a3244; border-radius: 5px; padding: 5px 10px; font-family: inherit; font-size: 12px;" />
+      <button id="btnCopyLink">Copy Link Lời Chúc</button>
     </div>
   </div>
 
@@ -235,7 +237,22 @@
     const BLUE_BOX = [0.20, 0.52, 0.98];
     const WARM = [1.00, 0.88, 0.50];
 
-    const MESSAGE = "M E R R Y   C H R I S T M A S   2 0 2 6";
+    function formatBannerText(raw) {
+      const clean = String(raw || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d").replace(/Đ/g, "D")
+        .replace(/[^\x20-\x7E]/g, "")
+        .trim()
+        .toUpperCase()
+        .slice(0, 44);
+      if (!clean) return "";
+      return clean.split("").join(" ");
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialRawMsg = urlParams.get("msg") || "MERRY CHRISTMAS 2026";
+    let MESSAGE = formatBannerText(initialRawMsg);
 
     // Authentic per-material ASCII ramps matching @dwcminh.ascii aesthetic
     const RAMP_NEEDLE = " .:-~=+*xv%&#W";
@@ -719,7 +736,6 @@
     let lastTs = performance.now();
     let fpsSmooth = 60.0;
     let frameCounter = 0;
-    const hudTime = document.getElementById("hudTime");
     const hudRot = document.getElementById("hudRot");
     const hudLet = document.getElementById("hudLet");
     const timeSlider = document.getElementById("timeSlider");
@@ -975,7 +991,6 @@
       if (frameCounter % 2 === 0) {
         const deg = ((angle * 180) / Math.PI) % 360;
         const lights = scene.lightT0.filter(x => t >= x).length;
-        hudTime.textContent = `t ${t.toFixed(2).padStart(5, "0")}s / 60.0s`;
         hudRot.textContent = `rotation ${deg.toFixed(2).padStart(6, "0")}°     lights ${lights}`;
         hudLet.textContent = `letters ${letters.toLocaleString()}`;
         timeSlider.value = t.toFixed(1);
@@ -989,11 +1004,31 @@
     // Controls
     const codePanel = document.getElementById("codePanel");
     const canvasWrap = document.getElementById("canvasWrap");
-    const statusLabel = document.getElementById("statusLabel");
+    const msgInput = document.getElementById("msgInput");
+    const btnCopyLink = document.getElementById("btnCopyLink");
+    msgInput.value = initialRawMsg;
+    msgInput.addEventListener("input", () => {
+      MESSAGE = formatBannerText(msgInput.value);
+    });
+    btnCopyLink.onclick = async () => {
+      const url = new URL(window.location.href);
+      const val = msgInput.value.trim();
+      if (val) url.searchParams.set("msg", val);
+      else url.searchParams.delete("msg");
+      try {
+        await navigator.clipboard.writeText(url.toString());
+        btnCopyLink.textContent = "Đã Copy Link!";
+        setTimeout(() => { btnCopyLink.textContent = "Copy Link Lời Chúc"; }, 1800);
+      } catch {
+        window.history.replaceState({}, "", url.toString());
+        btnCopyLink.textContent = "Đã cập nhật URL!";
+        setTimeout(() => { btnCopyLink.textContent = "Copy Link Lời Chúc"; }, 1800);
+      }
+    };
 
     document.getElementById("btnPause").onclick = () => {
       paused = !paused;
-      statusLabel.textContent = paused ? "paused · 60 fps · 60s loop" : "running · 60 fps · 60s loop";
+      document.getElementById("btnPause").textContent = paused ? "Space · Resume" : "Space · Pause";
     };
     document.getElementById("btnRestart").onclick = () => { t = 0.0; };
     document.getElementById("btnJump").onclick = () => { t = 18.5; };
@@ -1012,6 +1047,7 @@
       t = parseFloat(e.target.value);
     };
     window.addEventListener("keydown", (e) => {
+      if (document.activeElement === msgInput) return;
       if (e.code === "Space") { e.preventDefault(); document.getElementById("btnPause").click(); }
       else if (e.key === "r" || e.key === "R") { t = 0.0; }
       else if (e.key === "c" || e.key === "C") { document.getElementById("btnToggleCode").click(); }
