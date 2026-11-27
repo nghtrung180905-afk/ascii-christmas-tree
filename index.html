@@ -200,7 +200,7 @@
       <span id="fpsLabel">60 fps</span>
     </div>
     <div class="btn-group" style="width: 100%; margin-top: 2px;">
-      <input type="text" id="msgInput" value="MERRY CHRISTMAS 2026" maxlength="44" placeholder="Nhập lời chúc (VD: MERRY CHRISTMAS 2026)" style="flex: 1; min-width: 220px; background: #141822; color: #d8dee9; border: 1px solid #2a3244; border-radius: 5px; padding: 5px 10px; font-family: inherit; font-size: 12px;" />
+      <input type="text" id="msgInput" value="MERRY CHRISTMAS VỢ YÊN" maxlength="44" placeholder="Nhập lời chúc (VD: MERRY CHRISTMAS VỢ YÊN)" style="flex: 1; min-width: 220px; background: #141822; color: #d8dee9; border: 1px solid #2a3244; border-radius: 5px; padding: 5px 10px; font-family: inherit; font-size: 12px;" />
       <button id="btnCopyLink">Copy Link Lời Chúc</button>
     </div>
   </div>
@@ -239,19 +239,15 @@
 
     function formatBannerText(raw) {
       const clean = String(raw || "")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/đ/g, "d").replace(/Đ/g, "D")
-        .replace(/[^\x20-\x7E]/g, "")
         .trim()
         .toUpperCase()
         .slice(0, 44);
       if (!clean) return "";
-      return clean.split("").join(" ");
+      return Array.from(clean).join(" ");
     }
 
     const urlParams = new URLSearchParams(window.location.search);
-    const initialRawMsg = urlParams.get("msg") || "MERRY CHRISTMAS 2026";
+    const initialRawMsg = urlParams.get("msg") || "MERRY CHRISTMAS VỢ YÊN";
     let MESSAGE = formatBannerText(initialRawMsg);
 
     // Authentic per-material ASCII ramps matching @dwcminh.ascii aesthetic
@@ -912,23 +908,17 @@
         drawStar(cx, cy, size, t, 0.98 * on * masterAlpha, cell, flash);
       }
 
-      // 6. Typewriter "M E R R Y   C H R I S T M A S   2 0 2 6"
-      if (t > T_MSG) {
-        const row = ROWS - 7;
-        const x0 = Math.floor((COLS - MESSAGE.length) / 2);
-        const shown = Math.min(MESSAGE.length, Math.floor((t - T_MSG) * 10));
-        for (let r = row - 1; r <= row + 1; r++) {
-          for (let c = Math.max(0, x0 - 3); c < Math.min(COLS, x0 + shown + 3); c++) {
+      // 6. Clear band for Typewriter Banner (drawn with full Unicode/Vietnamese support below)
+      let bannerShown = 0;
+      let bannerRow = ROWS - 7;
+      let bannerX0 = 0;
+      const msgChars = Array.from(MESSAGE);
+      if (t > T_MSG && msgChars.length > 0) {
+        bannerX0 = Math.floor((COLS - msgChars.length) / 2);
+        bannerShown = Math.min(msgChars.length, Math.floor((t - T_MSG) * 10));
+        for (let r = bannerRow - 1; r <= bannerRow + 1; r++) {
+          for (let c = Math.max(0, bannerX0 - 3); c < Math.min(COLS, bannerX0 + bannerShown + 3); c++) {
             charBuf[r * COLS + c] = 0;
-          }
-        }
-        const pal = [RED, GOLD, GREEN_BOX];
-        for (let i = 0; i < shown; i++) {
-          const ch = MESSAGE[i];
-          if (ch !== " ") {
-            const tint = pal[(Math.floor(i / 2) + Math.floor(t * 1.5)) % 3];
-            const pulse = (0.88 + 0.25 * Math.sin(t * 5 + i)) * masterAlpha;
-            putCell(row, x0 + i, ch.charCodeAt(0), tint[0], tint[1], tint[2], pulse);
           }
         }
       }
@@ -971,6 +961,28 @@
       }
 
       crispCtx.putImageData(frameImg, 0, 0);
+
+      // Draw full Unicode / Vietnamese typewriter banner onto crispCanvas (included in bloom!)
+      if (bannerShown > 0) {
+        crispCtx.font = "bold 14px Consolas, Menlo, 'DejaVu Sans Mono', 'Segoe UI', monospace";
+        crispCtx.textAlign = "center";
+        crispCtx.textBaseline = "middle";
+        const pal = [RED, GOLD, GREEN_BOX];
+        const yPx = bannerRow * CH + CH * 0.53;
+        for (let i = 0; i < bannerShown; i++) {
+          const ch = msgChars[i];
+          if (ch !== " ") {
+            letters++;
+            const tint = pal[(Math.floor(i / 2) + Math.floor(t * 1.5)) % 3];
+            const pulse = (0.88 + 0.25 * Math.sin(t * 5 + i)) * masterAlpha;
+            const rC = Math.min(255, (tint[0] * pulse * 255) | 0);
+            const gC = Math.min(255, (tint[1] * pulse * 255) | 0);
+            const bC = Math.min(255, (tint[2] * pulse * 255) | 0);
+            crispCtx.fillStyle = `rgb(${rC},${gC},${bC})`;
+            crispCtx.fillText(ch, (bannerX0 + i) * CW + CW * 0.5, yPx);
+          }
+        }
+      }
 
       // Composite crisp ASCII + soft neon terminal bloom
       ctx.globalCompositeOperation = "source-over";
